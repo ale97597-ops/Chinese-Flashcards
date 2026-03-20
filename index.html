@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="汉字卡片">
+<meta name="theme-color" content="#1a1a2e">
+<title>汉字卡片 · Chinese Flashcards</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1a2e;
+    --card-front: #16213e;
+    --card-back: #0f3460;
+    --accent: #e94560;
+    --gold: #c9a84c;
+    --text-primary: #fffffe;
+    --text-secondary: #a7a9be;
+    --text-dim: #4a4e69;
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 12px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .app-title {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 18px;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+  }
+
+  .deck-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    padding: 0 24px 16px;
+  }
+
+  .progress-track {
+    height: 3px;
+    background: var(--text-dim);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--gold));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Card stage */
+  .stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 24px;
+    perspective: 1200px;
+  }
+
+  .card-wrap {
+    width: 100%;
+    max-width: 360px;
+    height: 420px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 28px;
+    user-select: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .card-face.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.97);
+  }
+
+  /* Front face — English */
+  .card-front {
+    background: linear-gradient(145deg, #1e2140, #16213e);
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .card-front::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: var(--radius);
+    background:
+      radial-gradient(circle at 20% 20%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(circle at 80% 80%, rgba(233,69,96,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .card-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+
+  .english-word {
+    font-family: 'Crimson Pro', serif;
+    font-size: clamp(28px, 7vw, 38px);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 32px;
+  }
+
+  .tap-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-top: auto;
+  }
+
+  .tap-hint svg {
+    width: 16px; height: 16px;
+    opacity: 0.5;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+  }
+
+  /* Back face — Chinese */
+  .card-back {
+    background: linear-gradient(145deg, #0f3460, #0a2744);
+    border: 1px solid rgba(233, 69, 96, 0.2);
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .card-back::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: var(--radius);
+    background:
+      radial-gradient(circle at 80% 20%, rgba(233,69,96,0.08) 0%, transparent 60%),
+      radial-gradient(circle at 20% 80%, rgba(201,168,76,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .chinese-char {
+    font-family: 'Noto Serif SC', serif;
+    font-size: clamp(52px, 15vw, 80px);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-shadow: 0 0 40px rgba(201,168,76,0.3);
+    letter-spacing: 0.05em;
+  }
+
+  .pinyin {
+    font-family: 'Crimson Pro', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--gold);
+    margin-bottom: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .divider {
+    width: 40px;
+    height: 1px;
+    background: rgba(255,255,255,0.15);
+    margin-bottom: 20px;
+  }
+
+  .english-hint {
+    font-size: 16px;
+    font-style: italic;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* Bottom controls */
+  .controls {
+    padding: 12px 24px 32px;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .btn {
+    flex: 1;
+    max-width: 160px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn-prev {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .btn-next {
+    background: linear-gradient(135deg, var(--accent), #c73652);
+    color: white;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.35);
+  }
+
+  .btn-shuffle {
+    flex: none;
+    width: 48px;
+    max-width: 48px;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.2);
+    padding: 14px;
+  }
+
+  /* Decorative Chinese character watermark */
+  .watermark {
+    position: fixed;
+    bottom: -20px;
+    right: -20px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 180px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.015);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+  }
+
+  /* Card enter animation */
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card-wrap {
+    animation: cardIn 0.35s cubic-bezier(0.4,0,0.2,1) both;
+  }
+
+  /* Completed state */
+  .done-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .done-char {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 80px;
+    color: var(--gold);
+  }
+
+  .done-title {
+    font-size: 28px;
+    font-style: italic;
+    font-weight: 300;
+  }
+
+  .done-sub {
+    font-size: 16px;
+    color: var(--text-secondary);
+  }
+
+  .btn-restart {
+    margin-top: 16px;
+    padding: 14px 36px;
+    background: linear-gradient(135deg, var(--accent), #c73652);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="watermark" id="watermark">学</div>
+
+<div class="header">
+  <div class="app-title">汉字卡片</div>
+  <div class="deck-info" id="deckInfo">1 / 21</div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+  <div class="progress-labels">
+    <span id="progressLabel">0 studied</span>
+    <span id="totalLabel">21 cards</span>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="card-wrap" id="cardWrap" onclick="flipCard()">
+    <div class="card-face card-front" id="cardFront">
+      <div class="card-label">English</div>
+      <div class="english-word" id="engWord">Loading…</div>
+      <div class="tap-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M7 11.5V14a5 5 0 0010 0v-2.5M12 3v8m0 0l-2.5-2.5M12 11l2.5-2.5"/>
+        </svg>
+        tap to reveal
+      </div>
+    </div>
+    <div class="card-face card-back hidden" id="cardBack">
+      <div class="card-label">Chinese</div>
+      <div class="chinese-char" id="cnChar">—</div>
+      <div class="pinyin" id="pinyinText">—</div>
+      <div class="divider"></div>
+      <div class="english-hint" id="engHint">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls" id="controls">
+  <button class="btn btn-prev" onclick="prevCard()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M15 18l-6-6 6-6"/>
+    </svg>
+    Back
+  </button>
+  <button class="btn btn-shuffle" onclick="shuffleDeck()" title="Shuffle">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+    </svg>
+  </button>
+  <button class="btn btn-next" onclick="nextCard()">
+    Next
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M9 18l6-6-6-6"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+// ── Flashcard data ──────────────────────────────────────────────
+const CARDS_RAW = [
+  { chinese: "鼠标",    english: "Computer mouse" },
+  { chinese: "流行趋势", english: "Widespread tendency/trend" },
+  { chinese: "剧场",    english: "Theatre" },
+  { chinese: "亲切",    english: "Cordial" },
+  { chinese: "幼儿园",  english: "Kindergarten" },
+  { chinese: "用户",    english: "User" },
+  { chinese: "用户体验", english: "User experience" },
+  { chinese: "线上",    english: "Online" },
+  { chinese: "线下",    english: "Offline" },
+  { chinese: "营销",    english: "Marketing" },
+  { chinese: "口罩",    english: "Gauze mask" },
+  { chinese: "摘",      english: "Take off" },
+  { chinese: "助理",    english: "Assistant" },
+  { chinese: "聚会",    english: "Get together" },
+  { chinese: "需求",    english: "Requirements" },
+  { chinese: "社交",    english: "Social / socialising" },
+  { chinese: "思考",    english: "Think deeply / ponder over" },
+  { chinese: "享受",    english: "Enjoy" },
+  { chinese: "应运而生", english: "Emerge as the times demand" },
+  { chinese: "规划",    english: "Program, plan" },
+  { chinese: "观察",    english: "Observe, watch" }
+];
+
+// ── Pinyin lookup (offline, no library needed) ──────────────────
+const PINYIN_MAP = {
+  "鼠":"shǔ","标":"biāo","流":"liú","行":"xíng","趋":"qū","势":"shì",
+  "剧":"jù","场":"chǎng","亲":"qīn","切":"qiē","幼":"yòu","儿":"ér","园":"yuán",
+  "用":"yòng","户":"hù","体":"tǐ","验":"yàn","线":"xiàn","上":"shàng","下":"xià",
+  "营":"yíng","销":"xiāo","口":"kǒu","罩":"zhào","摘":"zhāi","助":"zhù","理":"lǐ",
+  "聚":"jù","会":"huì","需":"xū","求":"qiú","社":"shè","交":"jiāo","思":"sī",
+  "考":"kǎo","享":"xiǎng","受":"shòu","应":"yìng","运":"yùn","而":"ér","生":"shēng",
+  "规":"guī","划":"huà","观":"guān","察":"chá","趋":"qū","经":"jīng","历":"lì",
+  "知":"zhī","识":"shí","学":"xué","习":"xí","语":"yǔ","言":"yán","文":"wén",
+  "字":"zì","词":"cí","句":"jù","话":"huà","说":"shuō","读":"dú","写":"xiě",
+  "听":"tīng","看":"kàn","做":"zuò","工":"gōng","作":"zuò","人":"rén","们":"men",
+  "是":"shì","在":"zài","有":"yǒu","来":"lái","去":"qù","大":"dà","小":"xiǎo",
+  "好":"hǎo","多":"duō","少":"shǎo","很":"hěn","也":"yě","都":"dōu","不":"bù",
+  "了":"le","和":"hé","的":"de","地":"de","得":"de","那":"nà","这":"zhè",
+  "个":"gè","我":"wǒ","你":"nǐ","他":"tā","她":"tā","它":"tā","我":"wǒ",
+  "们":"men","一":"yī","二":"èr","三":"sān","四":"sì","五":"wǔ","六":"liù",
+  "七":"qī","八":"bā","九":"jiǔ","十":"shí","百":"bǎi","千":"qiān","万":"wàn"
+};
+
+function getPinyin(chinese) {
+  return chinese.split('').map(c => PINYIN_MAP[c] || c).join(' ');
+}
+
+// ── State ────────────────────────────────────────────────────────
+let deck = [...CARDS_RAW];
+let idx = 0;
+let studied = new Set();
+let isFlipped = false;
+
+// ── Render ───────────────────────────────────────────────────────
+function render() {
+  const card = deck[idx];
+  const total = deck.length;
+
+  isFlipped = false;
+
+  const front = document.getElementById('cardFront');
+  const back = document.getElementById('cardBack');
+  if (front) front.classList.remove('hidden');
+  if (back) back.classList.add('hidden');
+
+  // Animate new card
+  const wrap = document.getElementById('cardWrap');
+  if (wrap) {
+    wrap.style.animation = 'none';
+    wrap.offsetHeight;
+    wrap.style.animation = '';
+  }
+
+  document.getElementById('engWord').textContent = card.english;
+  document.getElementById('cnChar').textContent = card.chinese;
+  document.getElementById('pinyinText').textContent = getPinyin(card.chinese);
+  document.getElementById('engHint').textContent = card.english;
+  document.getElementById('deckInfo').textContent = `${idx + 1} / ${total}`;
+  document.getElementById('watermark').textContent = card.chinese[0] || '学';
+
+  const pct = studied.size / total * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${studied.size} studied`;
+  document.getElementById('totalLabel').textContent = `${total} cards`;
+}
+
+function flipCard() {
+  const front = document.getElementById('cardFront');
+  const back = document.getElementById('cardBack');
+  isFlipped = !isFlipped;
+  if (isFlipped) {
+    front.classList.add('hidden');
+    back.classList.remove('hidden');
+    studied.add(idx);
+  } else {
+    back.classList.add('hidden');
+    front.classList.remove('hidden');
+  }
+  const pct = studied.size / deck.length * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${studied.size} studied`;
+}
+
+function nextCard() {
+  if (idx < deck.length - 1) {
+    idx++;
+    render();
+  } else {
+    showDone();
+  }
+}
+
+function prevCard() {
+  if (idx > 0) {
+    idx--;
+    render();
+  }
+}
+
+function shuffleDeck() {
+  deck = [...deck].sort(() => Math.random() - 0.5);
+  idx = 0;
+  studied.clear();
+  render();
+}
+
+function showDone() {
+  document.getElementById('stage').innerHTML = `
+    <div class="done-screen">
+      <div class="done-char">好！</div>
+      <div class="done-title">Deck complete</div>
+      <div class="done-sub">You've gone through all ${deck.length} cards.</div>
+      <button class="btn-restart" onclick="restart()">Start again</button>
+    </div>
+  `;
+  document.getElementById('controls').style.display = 'none';
+}
+
+function restart() {
+  idx = 0;
+  studied.clear();
+  document.getElementById('controls').style.display = '';
+  document.getElementById('stage').innerHTML = `
+    <div class="card-wrap" id="cardWrap" onclick="flipCard()">
+      <div class="card-face card-front" id="cardFront">
+        <div class="card-label">English</div>
+        <div class="english-word" id="engWord"></div>
+        <div class="tap-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 11.5V14a5 5 0 0010 0v-2.5M12 3v8m0 0l-2.5-2.5M12 11l2.5-2.5"/>
+          </svg>
+          tap to reveal
+        </div>
+      </div>
+      <div class="card-face card-back hidden" id="cardBack">
+        <div class="card-label">Chinese</div>
+        <div class="chinese-char" id="cnChar"></div>
+        <div class="pinyin" id="pinyinText"></div>
+        <div class="divider"></div>
+        <div class="english-hint" id="engHint"></div>
+      </div>
+    </div>
+  `;
+  render();
+}
+
+// ── Swipe support ────────────────────────────────────────────────
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+    if (dx < 0) nextCard();
+    else prevCard();
+  }
+}, { passive: true });
+
+// ── Keyboard support ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') nextCard();
+  if (e.key === 'ArrowLeft') prevCard();
+  if (e.key === 'Enter') flipCard();
+});
+
+// ── Init ─────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
