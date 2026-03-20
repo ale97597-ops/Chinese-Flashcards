@@ -6,619 +6,493 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="汉字卡片">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#0f0e17">
 <title>汉字卡片 · Chinese Flashcards</title>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
-
 <style>
-  :root {
-    --bg: #0f0e17;
-    --surface: #1a1a2e;
-    --card-front: #16213e;
-    --card-back: #0f3460;
-    --accent: #e94560;
-    --gold: #c9a84c;
-    --text-primary: #fffffe;
-    --text-secondary: #a7a9be;
-    --text-dim: #4a4e69;
-    --radius: 20px;
-  }
+:root {
+  --bg: #0f0e17;
+  --surface: #1a1a2e;
+  --accent: #e94560;
+  --gold: #c9a84c;
+  --green: #4caf82;
+  --text-primary: #fffffe;
+  --text-secondary: #a7a9be;
+  --text-dim: #4a4e69;
+  --radius: 20px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg); color: var(--text-primary);
+  font-family: 'Crimson Pro', Georgia, serif;
+  height: 100vh; height: -webkit-fill-available;
+  display: flex; flex-direction: column;
+  overflow: hidden; position: fixed; width: 100%;
+}
+.screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+.screen.active { display: flex; }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* ── DECK LIST ── */
+.dl-header { padding: 52px 24px 16px; }
+.dl-title { font-family:'Noto Serif SC',serif; font-size:26px; color:var(--gold); }
+.dl-sub { font-size:13px; color:var(--text-secondary); margin-top:4px; }
+.dl-scroll { flex:1; overflow-y:auto; padding:8px 24px 40px; -webkit-overflow-scrolling:touch; }
 
-  body {
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: 'Crimson Pro', Georgia, serif;
-    min-height: 100vh;
-    min-height: -webkit-fill-available;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-  }
+.deck-card {
+  background: linear-gradient(135deg,#1e2140,#16213e);
+  border: 1px solid rgba(201,168,76,0.12);
+  border-radius:16px; padding:20px; margin-bottom:14px;
+  cursor:pointer; position:relative; overflow:hidden;
+  transition: transform 0.15s;
+}
+.deck-card:active { transform:scale(0.98); }
+.deck-card::after {
+  content: attr(data-icon);
+  position:absolute; right:14px; top:50%; transform:translateY(-50%);
+  font-family:'Noto Serif SC',serif; font-size:52px; font-weight:700;
+  color:rgba(255,255,255,0.04); pointer-events:none;
+}
+.deck-name { font-size:18px; margin-bottom:5px; }
+.deck-meta { font-size:13px; color:var(--text-secondary); margin-bottom:10px; }
+.deck-bar { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; margin-bottom:8px; }
+.deck-bar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--gold)); border-radius:2px; transition:width 0.4s; }
+.deck-stats { display:flex; gap:14px; font-size:12px; letter-spacing:0.05em; text-transform:uppercase; }
+.s-known { color:var(--green); }
+.s-not { color:var(--accent); }
+.s-unseen { color:var(--text-dim); }
 
-  /* Header */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px 12px;
-    position: relative;
-    z-index: 10;
-  }
+/* ── STUDY SCREEN ── */
+.study-header {
+  display:flex; align-items:center; gap:12px;
+  padding:52px 20px 10px;
+}
+.btn-back {
+  background:rgba(255,255,255,0.06); border:none; color:var(--text-secondary);
+  border-radius:10px; width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+}
+.study-name { font-size:16px; flex:1; line-height:1.2; }
+.card-ctr { font-size:13px; color:var(--text-secondary); }
 
-  .app-title {
-    font-family: 'Noto Serif SC', serif;
-    font-size: 18px;
-    letter-spacing: 0.05em;
-    color: var(--gold);
-  }
+.prog-wrap { padding:0 20px 10px; }
+.prog-track { height:3px; background:var(--text-dim); border-radius:2px; overflow:hidden; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--gold)); border-radius:2px; transition:width 0.4s; }
+.prog-labels { display:flex; justify-content:space-between; margin-top:5px; font-size:11px; color:var(--text-dim); letter-spacing:0.08em; text-transform:uppercase; }
 
-  .deck-info {
-    font-size: 13px;
-    color: var(--text-secondary);
-    letter-spacing: 0.05em;
-  }
+.stage { flex:1; display:flex; align-items:center; justify-content:center; padding:10px 20px; perspective:1200px; }
 
-  /* Progress bar */
-  .progress-wrap {
-    padding: 0 24px 16px;
-  }
+.card-wrap {
+  width:100%; max-width:360px; height:400px;
+  position:relative; transform-style:preserve-3d;
+  transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);
+  cursor:pointer;
+  animation:cardIn 0.35s cubic-bezier(0.4,0,0.2,1) both;
+}
+.card-wrap.flipped { transform:rotateY(180deg); }
+@keyframes cardIn {
+  from { opacity:0; transform:translateY(18px) scale(0.97); }
+  to   { opacity:1; transform:none; }
+}
+.card-face {
+  position:absolute; inset:0; border-radius:var(--radius);
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:28px 24px; user-select:none;
+}
+.cf {
+  background:linear-gradient(145deg,#1e2140,#16213e);
+  border:1px solid rgba(201,168,76,0.15);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.cf::before {
+  content:''; position:absolute; inset:0; border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 20% 20%,rgba(201,168,76,0.06) 0%,transparent 60%),
+    radial-gradient(circle at 80% 80%,rgba(233,69,96,0.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.cb {
+  background:linear-gradient(145deg,#0f3460,#0a2744);
+  border:1px solid rgba(233,69,96,0.2);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05);
+  transform:rotateY(180deg);
+}
+.cb::before {
+  content:''; position:absolute; inset:0; border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 80% 20%,rgba(233,69,96,0.08) 0%,transparent 60%),
+    radial-gradient(circle at 20% 80%,rgba(201,168,76,0.08) 0%,transparent 60%);
+  pointer-events:none;
+}
 
-  .progress-track {
-    height: 3px;
-    background: var(--text-dim);
-    border-radius: 2px;
-    overflow: hidden;
-  }
+.card-lbl { font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:var(--text-dim); margin-bottom:16px; }
+.tags-row { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-bottom:12px; }
+.tag {
+  font-size:11px; padding:3px 10px; border-radius:20px;
+  background:rgba(201,168,76,0.12); color:var(--gold);
+  border:1px solid rgba(201,168,76,0.25);
+  font-family:'Noto Serif SC',serif;
+}
+.eng-word { font-size:clamp(24px,6vw,34px); font-weight:300; font-style:italic; text-align:center; line-height:1.3; margin-bottom:20px; }
+.tap-hint { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); letter-spacing:0.1em; margin-top:auto; }
+.tap-hint svg { animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:0.3;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.1)} }
 
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--gold));
-    border-radius: 2px;
-    transition: width 0.4s ease;
-  }
+.cn-char { font-family:'Noto Serif SC',serif; font-size:clamp(46px,13vw,70px); font-weight:700; margin-bottom:4px; text-shadow:0 0 40px rgba(201,168,76,0.3); letter-spacing:0.05em; }
+.pinyin { font-size:19px; font-weight:300; color:var(--gold); margin-bottom:6px; letter-spacing:0.05em; }
+.audio-btn {
+  background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.28);
+  color:var(--gold); border-radius:20px; padding:5px 14px; font-size:13px;
+  cursor:pointer; display:flex; align-items:center; gap:6px;
+  margin-bottom:14px; font-family:'Crimson Pro',serif; transition:background 0.2s;
+}
+.audio-btn:active { background:rgba(201,168,76,0.28); }
+.divider { width:40px; height:1px; background:rgba(255,255,255,0.12); margin-bottom:12px; }
+.eng-hint { font-size:14px; font-style:italic; color:var(--text-secondary); text-align:center; line-height:1.4; }
 
-  .progress-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 6px;
-    font-size: 11px;
-    color: var(--text-dim);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
+/* controls */
+.controls { padding:10px 20px 36px; display:flex; gap:10px; }
+.btn-rate {
+  flex:1; padding:13px 8px; border:none; border-radius:14px;
+  font-family:'Crimson Pro',serif; font-size:15px; letter-spacing:0.03em;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+  transition:transform 0.15s;
+}
+.btn-rate:active { transform:scale(0.96); }
+.btn-no { background:rgba(233,69,96,0.15); color:var(--accent); border:1px solid rgba(233,69,96,0.3); }
+.btn-skip { flex:0.55; background:rgba(255,255,255,0.05); color:var(--text-secondary); border:1px solid rgba(255,255,255,0.08); }
+.btn-yes { background:rgba(76,175,130,0.15); color:var(--green); border:1px solid rgba(76,175,130,0.3); }
 
-  /* Card stage */
-  .stage {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px 24px;
-    perspective: 1200px;
-  }
+/* watermark */
+.wm { position:fixed; bottom:-20px; right:-10px; font-family:'Noto Serif SC',serif; font-size:150px; font-weight:700; color:rgba(255,255,255,0.015); pointer-events:none; user-select:none; line-height:1; }
 
-  .card-wrap {
-    width: 100%;
-    max-width: 360px;
-    height: 420px;
-    position: relative;
-    cursor: pointer;
-  }
-
-  .card-face {
-    position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 28px;
-    user-select: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-  }
-
-  .card-face.hidden {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.97);
-  }
-
-  /* Front face — English */
-  .card-front {
-    background: linear-gradient(145deg, #1e2140, #16213e);
-    border: 1px solid rgba(201, 168, 76, 0.15);
-    box-shadow:
-      0 20px 60px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-
-  .card-front::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: var(--radius);
-    background:
-      radial-gradient(circle at 20% 20%, rgba(201,168,76,0.06) 0%, transparent 60%),
-      radial-gradient(circle at 80% 80%, rgba(233,69,96,0.06) 0%, transparent 60%);
-    pointer-events: none;
-  }
-
-  .card-label {
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    margin-bottom: 24px;
-  }
-
-  .english-word {
-    font-family: 'Crimson Pro', serif;
-    font-size: clamp(28px, 7vw, 38px);
-    font-weight: 300;
-    font-style: italic;
-    color: var(--text-primary);
-    text-align: center;
-    line-height: 1.3;
-    margin-bottom: 32px;
-  }
-
-  .tap-hint {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--text-dim);
-    letter-spacing: 0.1em;
-    margin-top: auto;
-  }
-
-  .tap-hint svg {
-    width: 16px; height: 16px;
-    opacity: 0.5;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.1); }
-  }
-
-  /* Back face — Chinese */
-  .card-back {
-    background: linear-gradient(145deg, #0f3460, #0a2744);
-    border: 1px solid rgba(233, 69, 96, 0.2);
-    box-shadow:
-      0 20px 60px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.05);
-  }
-
-  .card-back::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    border-radius: var(--radius);
-    background:
-      radial-gradient(circle at 80% 20%, rgba(233,69,96,0.08) 0%, transparent 60%),
-      radial-gradient(circle at 20% 80%, rgba(201,168,76,0.08) 0%, transparent 60%);
-    pointer-events: none;
-  }
-
-  .chinese-char {
-    font-family: 'Noto Serif SC', serif;
-    font-size: clamp(52px, 15vw, 80px);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-    text-shadow: 0 0 40px rgba(201,168,76,0.3);
-    letter-spacing: 0.05em;
-  }
-
-  .pinyin {
-    font-family: 'Crimson Pro', serif;
-    font-size: 22px;
-    font-weight: 300;
-    color: var(--gold);
-    margin-bottom: 20px;
-    letter-spacing: 0.05em;
-  }
-
-  .divider {
-    width: 40px;
-    height: 1px;
-    background: rgba(255,255,255,0.15);
-    margin-bottom: 20px;
-  }
-
-  .english-hint {
-    font-size: 16px;
-    font-style: italic;
-    color: var(--text-secondary);
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  /* Bottom controls */
-  .controls {
-    padding: 12px 24px 32px;
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-  }
-
-  .btn {
-    flex: 1;
-    max-width: 160px;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 14px;
-    font-family: 'Crimson Pro', serif;
-    font-size: 15px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .btn:active { transform: scale(0.96); }
-
-  .btn-prev {
-    background: rgba(255,255,255,0.06);
-    color: var(--text-secondary);
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .btn-next {
-    background: linear-gradient(135deg, var(--accent), #c73652);
-    color: white;
-    box-shadow: 0 4px 20px rgba(233,69,96,0.35);
-  }
-
-  .btn-shuffle {
-    flex: none;
-    width: 48px;
-    max-width: 48px;
-    background: rgba(201,168,76,0.12);
-    color: var(--gold);
-    border: 1px solid rgba(201,168,76,0.2);
-    padding: 14px;
-  }
-
-  /* Decorative Chinese character watermark */
-  .watermark {
-    position: fixed;
-    bottom: -20px;
-    right: -20px;
-    font-family: 'Noto Serif SC', serif;
-    font-size: 180px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.015);
-    pointer-events: none;
-    user-select: none;
-    line-height: 1;
-  }
-
-  /* Card enter animation */
-  @keyframes cardIn {
-    from { opacity: 0; transform: translateY(20px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  .card-wrap {
-    animation: cardIn 0.35s cubic-bezier(0.4,0,0.2,1) both;
-  }
-
-  /* Completed state */
-  .done-screen {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px;
-    text-align: center;
-    gap: 16px;
-  }
-
-  .done-char {
-    font-family: 'Noto Serif SC', serif;
-    font-size: 80px;
-    color: var(--gold);
-  }
-
-  .done-title {
-    font-size: 28px;
-    font-style: italic;
-    font-weight: 300;
-  }
-
-  .done-sub {
-    font-size: 16px;
-    color: var(--text-secondary);
-  }
-
-  .btn-restart {
-    margin-top: 16px;
-    padding: 14px 36px;
-    background: linear-gradient(135deg, var(--accent), #c73652);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-family: 'Crimson Pro', serif;
-    font-size: 16px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-  }
+/* done */
+.done-screen { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px; text-align:center; gap:12px; }
+.done-char { font-family:'Noto Serif SC',serif; font-size:70px; color:var(--gold); }
+.done-title { font-size:25px; font-style:italic; font-weight:300; }
+.done-stats { display:flex; gap:24px; margin:8px 0; }
+.done-stat { text-align:center; }
+.done-num { font-size:30px; font-weight:300; }
+.done-lbl { font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.btn-again { padding:13px 36px; background:linear-gradient(135deg,var(--accent),#c73652); color:white; border:none; border-radius:14px; font-family:'Crimson Pro',serif; font-size:16px; letter-spacing:0.05em; cursor:pointer; }
+.btn-home-done { padding:10px 28px; background:transparent; color:var(--text-secondary); border:1px solid rgba(255,255,255,0.1); border-radius:14px; font-family:'Crimson Pro',serif; font-size:15px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<div class="watermark" id="watermark">学</div>
-
-<div class="header">
-  <div class="app-title">汉字卡片</div>
-  <div class="deck-info" id="deckInfo">1 / 21</div>
+<!-- DECK LIST -->
+<div class="screen active" id="screenDecks">
+  <div class="dl-header">
+    <div class="dl-title">汉字卡片</div>
+    <div class="dl-sub">Select a deck to study</div>
+  </div>
+  <div class="dl-scroll" id="deckList"></div>
 </div>
 
-<div class="progress-wrap">
-  <div class="progress-track">
-    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+<!-- STUDY -->
+<div class="screen" id="screenStudy">
+  <div class="wm" id="wm">学</div>
+  <div class="study-header">
+    <button class="btn-back" onclick="goHome()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="study-name" id="studyName"></div>
+    <div class="card-ctr" id="cardCtr"></div>
   </div>
-  <div class="progress-labels">
-    <span id="progressLabel">0 studied</span>
-    <span id="totalLabel">21 cards</span>
+  <div class="prog-wrap">
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-labels"><span id="progLbl">0 known</span><span id="progTotal"></span></div>
   </div>
-</div>
-
-<div class="stage" id="stage">
-  <div class="card-wrap" id="cardWrap" onclick="flipCard()">
-    <div class="card-face card-front" id="cardFront">
-      <div class="card-label">English</div>
-      <div class="english-word" id="engWord">Loading…</div>
-      <div class="tap-hint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M7 11.5V14a5 5 0 0010 0v-2.5M12 3v8m0 0l-2.5-2.5M12 11l2.5-2.5"/>
-        </svg>
-        tap to reveal
-      </div>
-    </div>
-    <div class="card-face card-back hidden" id="cardBack">
-      <div class="card-label">Chinese</div>
-      <div class="chinese-char" id="cnChar">—</div>
-      <div class="pinyin" id="pinyinText">—</div>
-      <div class="divider"></div>
-      <div class="english-hint" id="engHint">—</div>
-    </div>
+  <div class="stage" id="stage"></div>
+  <div class="controls" id="controls">
+    <button class="btn-rate btn-no" onclick="rateCard(false)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      Not yet
+    </button>
+    <button class="btn-rate btn-skip" onclick="skipCard()">Skip</button>
+    <button class="btn-rate btn-yes" onclick="rateCard(true)">
+      Known
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+    </button>
   </div>
-</div>
-
-<div class="controls" id="controls">
-  <button class="btn btn-prev" onclick="prevCard()">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M15 18l-6-6 6-6"/>
-    </svg>
-    Back
-  </button>
-  <button class="btn btn-shuffle" onclick="shuffleDeck()" title="Shuffle">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
-    </svg>
-  </button>
-  <button class="btn btn-next" onclick="nextCard()">
-    Next
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M9 18l6-6-6-6"/>
-    </svg>
-  </button>
 </div>
 
 <script>
-// ── Flashcard data ──────────────────────────────────────────────
-const CARDS_RAW = [
-  { chinese: "鼠标",    english: "Computer mouse" },
-  { chinese: "流行趋势", english: "Widespread tendency/trend" },
-  { chinese: "剧场",    english: "Theatre" },
-  { chinese: "亲切",    english: "Cordial" },
-  { chinese: "幼儿园",  english: "Kindergarten" },
-  { chinese: "用户",    english: "User" },
-  { chinese: "用户体验", english: "User experience" },
-  { chinese: "线上",    english: "Online" },
-  { chinese: "线下",    english: "Offline" },
-  { chinese: "营销",    english: "Marketing" },
-  { chinese: "口罩",    english: "Gauze mask" },
-  { chinese: "摘",      english: "Take off" },
-  { chinese: "助理",    english: "Assistant" },
-  { chinese: "聚会",    english: "Get together" },
-  { chinese: "需求",    english: "Requirements" },
-  { chinese: "社交",    english: "Social / socialising" },
-  { chinese: "思考",    english: "Think deeply / ponder over" },
-  { chinese: "享受",    english: "Enjoy" },
-  { chinese: "应运而生", english: "Emerge as the times demand" },
-  { chinese: "规划",    english: "Program, plan" },
-  { chinese: "观察",    english: "Observe, watch" }
+// ── DATA ────────────────────────────────────────────────────────────
+const DECKS = [
+  { id:"d1", name:"Lesson 1 · Tech & Society", icon:"数", cards:[
+    {c:"流行趋势",e:"Widespread tendency / trend",t:[]},
+    {c:"剧场",e:"Theatre",t:[]},
+    {c:"亲切",e:"Cordial",t:[]},
+    {c:"幼儿园",e:"Kindergarten",t:[]},
+    {c:"用户",e:"User",t:[]},
+    {c:"用户体验",e:"User experience",t:[]},
+    {c:"线上",e:"Online",t:[]},
+    {c:"线下",e:"Offline",t:[]},
+    {c:"营销",e:"Marketing",t:[]},
+    {c:"口罩",e:"Gauze mask",t:[]},
+    {c:"摘",e:"Take off",t:[]},
+    {c:"助理",e:"Assistant",t:[]},
+    {c:"聚会",e:"Get together",t:[]},
+    {c:"需求",e:"Requirements",t:[]},
+    {c:"社交",e:"Social / socialising",t:[]},
+    {c:"思考",e:"Think deeply / ponder over",t:[]},
+    {c:"享受",e:"Enjoy",t:[]},
+    {c:"应运而生",e:"Emerge as the times demand",t:["成语"]},
+    {c:"规划",e:"Program, plan",t:[]},
+    {c:"观察",e:"Observe, watch",t:[]}
+  ]},
+  { id:"d2", name:"Lesson 2 · Business", icon:"商", cards:[
+    {c:"迅速",e:"Rapid",t:[]},
+    {c:"概念",e:"Concept / conception",t:[]},
+    {c:"体现",e:"Embody / incarnate",t:[]},
+    {c:"非正式",e:"Informal",t:[]},
+    {c:"消费升级",e:"Consumption upgrade",t:[]},
+    {c:"商业",e:"Commerce / trade / business",t:[]},
+    {c:"配套",e:"Accessory / complementary",t:[]},
+    {c:"房地产",e:"Real estate",t:[]},
+    {c:"企业",e:"Enterprise / business",t:[]},
+    {c:"加盟连锁店",e:"Franchise member",t:[]},
+    {c:"设立",e:"To set up",t:[]},
+    {c:"消费者",e:"Consumer",t:[]},
+    {c:"演示",e:"To demonstrate",t:[]},
+    {c:"演示文稿",e:"Presentation (PPT)",t:[]},
+    {c:"功能",e:"Function",t:[]},
+    {c:"全方位",e:"All-around / comprehensive",t:[]},
+    {c:"提升",e:"To promote / elevate",t:[]},
+    {c:"咨询",e:"Seek advice / consult",t:[]},
+    {c:"咨询服务",e:"Customer service / consultancy",t:[]},
+    {c:"促进娱乐",e:"Promote entertainment",t:[]}
+  ]},
+  { id:"d3", name:"Lesson 3 · Design & Brand", icon:"品", cards:[
+    {c:"模式",e:"Pattern, model",t:[]},
+    {c:"立马",e:"Immediately",t:[]},
+    {c:"因素",e:"Element / factor",t:[]},
+    {c:"感性",e:"Emotional faculty",t:[]},
+    {c:"理性",e:"Rational faculty",t:[]},
+    {c:"定义",e:"Define / describe",t:[]},
+    {c:"设计",e:"Design, plan",t:[]},
+    {c:"多元化",e:"Diversify",t:[]},
+    {c:"设定",e:"To set up (e.g. alarm)",t:[]},
+    {c:"独一无二",e:"Unique, unparalleled",t:["成语"]},
+    {c:"定位",e:"Position / orientate",t:[]},
+    {c:"全面",e:"Overall / comprehensive",t:[]},
+    {c:"测量",e:"Survey / measure",t:[]},
+    {c:"形状",e:"Form, appearance",t:[]},
+    {c:"耐克",e:"Nike",t:[]},
+    {c:"品牌",e:"Brand",t:[]},
+    {c:"针对",e:"Directed at / against",t:[]},
+    {c:"个性化",e:"To personalize",t:[]},
+    {c:"落户",e:"To settle / set up home",t:[]},
+    {c:"拥有",e:"To possess",t:[]}
+  ]},
+  { id:"d4", name:"Lesson 4 · Digital & Retail", icon:"云", cards:[
+    {c:"展示",e:"To reveal / display",t:[]},
+    {c:"形象",e:"Image, form",t:[]},
+    {c:"休闲",e:"Leisure, relaxation",t:[]},
+    {c:"大数据",e:"Big data",t:[]},
+    {c:"云计算",e:"Cloud computing",t:[]},
+    {c:"人工智能",e:"Artificial intelligence",t:[]},
+    {c:"转型",e:"Transformation / to transform",t:[]},
+    {c:"先进",e:"Advanced",t:[]},
+    {c:"渠道",e:"Channel",t:[]},
+    {c:"重塑",e:"To reconstruct / reshape",t:[]},
+    {c:"业态",e:"Retail industry format",t:[]},
+    {c:"发展中国家",e:"Developing country",t:[]},
+    {c:"批发",e:"Wholesale",t:[]},
+    {c:"零售",e:"Retail",t:[]},
+    {c:"结构",e:"Structure, architecture",t:[]},
+    {c:"总监",e:"Chief inspector / director",t:[]},
+    {c:"行政",e:"Administration",t:[]},
+    {c:"财务",e:"Financial affairs",t:[]},
+    {c:"订货量",e:"Order quantity",t:[]},
+    {c:"一体",e:"Integral, whole",t:[]}
+  ]},
+  { id:"d5", name:"Lesson 5 · Negotiations", icon:"谈", cards:[
+    {c:"付款条件",e:"Payment terms",t:[]},
+    {c:"营销总监",e:"Marketing director",t:[]},
+    {c:"奖学金",e:"Scholarship",t:[]},
+    {c:"研究",e:"Study, research",t:[]},
+    {c:"名片",e:"Visiting / calling card",t:[]},
+    {c:"交换",e:"Exchange, swap",t:[]},
+    {c:"公章",e:"Official seal",t:[]},
+    {c:"宣传册",e:"Commercial brochure / flyer",t:[]},
+    {c:"签字",e:"To sign / affix signature",t:[]},
+    {c:"印泥",e:"Red ink paste for seals",t:[]},
+    {c:"国营企业",e:"State-owned enterprise (SOE)",t:[]},
+    {c:"盖",e:"Affix seal / put a cover on",t:[]},
+    {c:"标语",e:"Slogan",t:[]},
+    {c:"产品手册",e:"Product catalogue",t:[]},
+    {c:"许可证",e:"License, permit",t:[]},
+    {c:"谈判",e:"Negotiate",t:[]},
+    {c:"拓展",e:"To expand / develop",t:[]},
+    {c:"投资",e:"Investment / to invest",t:[]},
+    {c:"竞争对手",e:"Competitor, rival",t:[]},
+    {c:"合同",e:"Contract / agreement",t:[]}
+  ]}
 ];
 
-// ── Pinyin lookup (offline, no library needed) ──────────────────
-const PINYIN_MAP = {
-  "鼠":"shǔ","标":"biāo","流":"liú","行":"xíng","趋":"qū","势":"shì",
-  "剧":"jù","场":"chǎng","亲":"qīn","切":"qiē","幼":"yòu","儿":"ér","园":"yuán",
-  "用":"yòng","户":"hù","体":"tǐ","验":"yàn","线":"xiàn","上":"shàng","下":"xià",
-  "营":"yíng","销":"xiāo","口":"kǒu","罩":"zhào","摘":"zhāi","助":"zhù","理":"lǐ",
-  "聚":"jù","会":"huì","需":"xū","求":"qiú","社":"shè","交":"jiāo","思":"sī",
-  "考":"kǎo","享":"xiǎng","受":"shòu","应":"yìng","运":"yùn","而":"ér","生":"shēng",
-  "规":"guī","划":"huà","观":"guān","察":"chá","趋":"qū","经":"jīng","历":"lì",
-  "知":"zhī","识":"shí","学":"xué","习":"xí","语":"yǔ","言":"yán","文":"wén",
-  "字":"zì","词":"cí","句":"jù","话":"huà","说":"shuō","读":"dú","写":"xiě",
-  "听":"tīng","看":"kàn","做":"zuò","工":"gōng","作":"zuò","人":"rén","们":"men",
-  "是":"shì","在":"zài","有":"yǒu","来":"lái","去":"qù","大":"dà","小":"xiǎo",
-  "好":"hǎo","多":"duō","少":"shǎo","很":"hěn","也":"yě","都":"dōu","不":"bù",
-  "了":"le","和":"hé","的":"de","地":"de","得":"de","那":"nà","这":"zhè",
-  "个":"gè","我":"wǒ","你":"nǐ","他":"tā","她":"tā","它":"tā","我":"wǒ",
-  "们":"men","一":"yī","二":"èr","三":"sān","四":"sì","五":"wǔ","六":"liù",
-  "七":"qī","八":"bā","九":"jiǔ","十":"shí","百":"bǎi","千":"qiān","万":"wàn"
-};
+// ── PINYIN ──────────────────────────────────────────────────────────
+const PM={"流":"liú","行":"xíng","趋":"qū","势":"shì","剧":"jù","场":"chǎng","亲":"qīn","切":"qiē","幼":"yòu","儿":"ér","园":"yuán","用":"yòng","户":"hù","体":"tǐ","验":"yàn","线":"xiàn","上":"shàng","下":"xià","营":"yíng","销":"xiāo","口":"kǒu","罩":"zhào","摘":"zhāi","助":"zhù","理":"lǐ","聚":"jù","会":"huì","需":"xū","求":"qiú","社":"shè","交":"jiāo","思":"sī","考":"kǎo","享":"xiǎng","受":"shòu","应":"yìng","运":"yùn","而":"ér","生":"shēng","规":"guī","划":"huà","观":"guān","察":"chá","鼠":"shǔ","标":"biāo","迅":"xùn","速":"sù","概":"gài","念":"niàn","现":"xiàn","非":"fēi","正":"zhèng","式":"shì","消":"xiāo","费":"fèi","升":"shēng","级":"jí","促":"cù","进":"jìn","娱":"yú","乐":"lè","商":"shāng","业":"yè","配":"pèi","套":"tào","房":"fáng","地":"dì","产":"chǎn","企":"qǐ","加":"jiā","盟":"méng","连":"lián","锁":"suǒ","店":"diàn","设":"shè","立":"lì","演":"yǎn","示":"shì","文":"wén","稿":"gǎo","功":"gōng","能":"néng","全":"quán","方":"fāng","位":"wèi","提":"tí","咨":"zī","询":"xún","服":"fú","务":"wù","模":"mú","因":"yīn","素":"sù","感":"gǎn","性":"xìng","定":"dìng","义":"yì","计":"jì","多":"duō","元":"yuán","化":"huà","独":"dú","一":"yī","无":"wú","二":"èr","品":"pǐn","牌":"pái","针":"zhēn","对":"duì","个":"gè","个":"gè","落":"luò","拥":"yōng","有":"yǒu","展":"zhǎn","形":"xíng","象":"xiàng","休":"xiū","闲":"xián","大":"dà","数":"shù","据":"jù","云":"yún","算":"suàn","人":"rén","工":"gōng","智":"zhì","转":"zhuǎn","型":"xíng","先":"xiān","渠":"qú","道":"dào","重":"chóng","塑":"sù","发":"fā","中":"zhōng","国":"guó","家":"jiā","批":"pī","零":"líng","结":"jié","构":"gòu","总":"zǒng","监":"jiān","政":"zhèng","财":"cái","订":"dìng","货":"huò","量":"liàng","付":"fù","款":"kuǎn","条":"tiáo","件":"jiàn","奖":"jiǎng","学":"xué","金":"jīn","研":"yán","究":"jiū","名":"míng","片":"piàn","换":"huàn","公":"gōng","章":"zhāng","宣":"xuān","传":"chuán","册":"cè","签":"qiān","字":"zì","印":"yìn","泥":"ní","盖":"gài","语":"yǔ","许":"xǔ","可":"kě","证":"zhèng","谈":"tán","判":"pàn","拓":"tuò","投":"tóu","资":"zī","竞":"jìng","争":"zhēng","手":"shǒu","合":"hé","同":"tóng","马":"mǎ","立":"lì","收":"shōu","入":"rù","好":"hǎo","不":"bù","是":"shì","在":"zài","来":"lái","去":"qù","小":"xiǎo"};
+function py(cn){ return cn.split('').map(c=>PM[c]||c).join(' '); }
 
-function getPinyin(chinese) {
-  return chinese.split('').map(c => PINYIN_MAP[c] || c).join(' ');
+// ── STORAGE ─────────────────────────────────────────────────────────
+function load(id){ try{return JSON.parse(localStorage.getItem('hzp_'+id)||'{}')}catch{return{}} }
+function save(id,p){ try{localStorage.setItem('hzp_'+id,JSON.stringify(p))}catch{} }
+
+// ── STATE ────────────────────────────────────────────────────────────
+let CUR=null, CARDS=[], IDX=0, FLIPPED=false, DPROG={};
+
+// ── DECK LIST ────────────────────────────────────────────────────────
+function renderList(){
+  const el=document.getElementById('deckList');
+  el.innerHTML='';
+  DECKS.forEach(dk=>{
+    const p=load(dk.id), tot=dk.cards.length;
+    const known=dk.cards.filter(c=>p[c.c]===true).length;
+    const no=dk.cards.filter(c=>p[c.c]===false).length;
+    const pct=Math.round(known/tot*100);
+    const d=document.createElement('div');
+    d.className='deck-card'; d.setAttribute('data-icon',dk.icon);
+    d.innerHTML=`
+      <div class="deck-name">${dk.name}</div>
+      <div class="deck-meta">${tot} cards · ${pct}% known</div>
+      <div class="deck-bar"><div class="deck-bar-fill" style="width:${pct}%"></div></div>
+      <div class="deck-stats">
+        <span class="s-known">✓ ${known}</span>
+        <span class="s-not">✗ ${no}</span>
+        <span class="s-unseen">◦ ${tot-known-no} unseen</span>
+      </div>`;
+    d.onclick=()=>startDeck(dk);
+    el.appendChild(d);
+  });
 }
 
-// ── State ────────────────────────────────────────────────────────
-let deck = [...CARDS_RAW];
-let idx = 0;
-let studied = new Set();
-let isFlipped = false;
-
-// ── Render ───────────────────────────────────────────────────────
-function render() {
-  const card = deck[idx];
-  const total = deck.length;
-
-  isFlipped = false;
-
-  const front = document.getElementById('cardFront');
-  const back = document.getElementById('cardBack');
-  if (front) front.classList.remove('hidden');
-  if (back) back.classList.add('hidden');
-
-  // Animate new card
-  const wrap = document.getElementById('cardWrap');
-  if (wrap) {
-    wrap.style.animation = 'none';
-    wrap.offsetHeight;
-    wrap.style.animation = '';
-  }
-
-  document.getElementById('engWord').textContent = card.english;
-  document.getElementById('cnChar').textContent = card.chinese;
-  document.getElementById('pinyinText').textContent = getPinyin(card.chinese);
-  document.getElementById('engHint').textContent = card.english;
-  document.getElementById('deckInfo').textContent = `${idx + 1} / ${total}`;
-  document.getElementById('watermark').textContent = card.chinese[0] || '学';
-
-  const pct = studied.size / total * 100;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = `${studied.size} studied`;
-  document.getElementById('totalLabel').textContent = `${total} cards`;
+// ── STUDY ────────────────────────────────────────────────────────────
+function startDeck(dk){
+  CUR=dk; CARDS=[...dk.cards]; IDX=0; FLIPPED=false;
+  DPROG=load(dk.id);
+  document.getElementById('studyName').textContent=dk.name;
+  document.getElementById('progTotal').textContent=CARDS.length+' cards';
+  showScreen('screenStudy');
+  renderCard();
 }
 
-function flipCard() {
-  const front = document.getElementById('cardFront');
-  const back = document.getElementById('cardBack');
-  isFlipped = !isFlipped;
-  if (isFlipped) {
-    front.classList.add('hidden');
-    back.classList.remove('hidden');
-    studied.add(idx);
-  } else {
-    back.classList.add('hidden');
-    front.classList.remove('hidden');
-  }
-  const pct = studied.size / deck.length * 100;
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = `${studied.size} studied`;
+function renderCard(){
+  const card=CARDS[IDX], tot=CARDS.length;
+  const known=CARDS.filter(c=>DPROG[c.c]===true).length;
+  document.getElementById('progFill').style.width=(known/tot*100)+'%';
+  document.getElementById('progLbl').textContent=known+' known';
+  document.getElementById('cardCtr').textContent=(IDX+1)+' / '+tot;
+  document.getElementById('wm').textContent=card.c[0]||'学';
+  FLIPPED=false;
+  document.getElementById('controls').style.display='';
+  const tagsHtml=card.t.length?`<div class="tags-row">${card.t.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:'';
+  const safe=card.c.replace(/'/g,"\\'");
+  document.getElementById('stage').innerHTML=`
+    <div class="card-wrap" id="cw" onclick="flipCard()">
+      <div class="card-face cf">
+        <div class="card-lbl">English → Chinese</div>
+        ${tagsHtml}
+        <div class="eng-word">${card.e}</div>
+        <div class="tap-hint">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M7 11.5V14a5 5 0 0010 0v-2.5M12 3v8m0 0l-2.5-2.5M12 11l2.5-2.5"/>
+          </svg>tap to reveal
+        </div>
+      </div>
+      <div class="card-face cb">
+        <div class="card-lbl">Chinese</div>
+        ${tagsHtml}
+        <div class="cn-char">${card.c}</div>
+        <div class="pinyin">${py(card.c)}</div>
+        <button class="audio-btn" onclick="speak(event,'${safe}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+          </svg>Listen
+        </button>
+        <div class="divider"></div>
+        <div class="eng-hint">${card.e}</div>
+      </div>
+    </div>`;
 }
 
-function nextCard() {
-  if (idx < deck.length - 1) {
-    idx++;
-    render();
-  } else {
-    showDone();
-  }
+function flipCard(){
+  const w=document.getElementById('cw'); if(!w) return;
+  w.classList.toggle('flipped'); FLIPPED=!FLIPPED;
 }
 
-function prevCard() {
-  if (idx > 0) {
-    idx--;
-    render();
-  }
+function speak(e,text){
+  e.stopPropagation();
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='zh-CN'; u.rate=0.85;
+  window.speechSynthesis.speak(u);
 }
 
-function shuffleDeck() {
-  deck = [...deck].sort(() => Math.random() - 0.5);
-  idx = 0;
-  studied.clear();
-  render();
+function rateCard(known){
+  if(!FLIPPED){ flipCard(); return; }
+  DPROG[CARDS[IDX].c]=known;
+  save(CUR.id,DPROG);
+  advance();
 }
 
-function showDone() {
-  document.getElementById('stage').innerHTML = `
+function skipCard(){ advance(); }
+
+function advance(){
+  if(IDX<CARDS.length-1){ IDX++; renderCard(); }
+  else showDone();
+}
+
+function showDone(){
+  const tot=CARDS.length;
+  const known=CARDS.filter(c=>DPROG[c.c]===true).length;
+  const no=CARDS.filter(c=>DPROG[c.c]===false).length;
+  document.getElementById('controls').style.display='none';
+  document.getElementById('stage').innerHTML=`
     <div class="done-screen">
       <div class="done-char">好！</div>
       <div class="done-title">Deck complete</div>
-      <div class="done-sub">You've gone through all ${deck.length} cards.</div>
-      <button class="btn-restart" onclick="restart()">Start again</button>
-    </div>
-  `;
-  document.getElementById('controls').style.display = 'none';
+      <div class="done-stats">
+        <div class="done-stat"><div class="done-num" style="color:var(--green)">${known}</div><div class="done-lbl">Known</div></div>
+        <div class="done-stat"><div class="done-num" style="color:var(--accent)">${no}</div><div class="done-lbl">Not yet</div></div>
+        <div class="done-stat"><div class="done-num">${tot}</div><div class="done-lbl">Total</div></div>
+      </div>
+      <button class="btn-again" onclick="startDeck(CUR)">Study again</button>
+      <button class="btn-home-done" onclick="goHome()">← All decks</button>
+    </div>`;
 }
 
-function restart() {
-  idx = 0;
-  studied.clear();
-  document.getElementById('controls').style.display = '';
-  document.getElementById('stage').innerHTML = `
-    <div class="card-wrap" id="cardWrap" onclick="flipCard()">
-      <div class="card-face card-front" id="cardFront">
-        <div class="card-label">English</div>
-        <div class="english-word" id="engWord"></div>
-        <div class="tap-hint">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M7 11.5V14a5 5 0 0010 0v-2.5M12 3v8m0 0l-2.5-2.5M12 11l2.5-2.5"/>
-          </svg>
-          tap to reveal
-        </div>
-      </div>
-      <div class="card-face card-back hidden" id="cardBack">
-        <div class="card-label">Chinese</div>
-        <div class="chinese-char" id="cnChar"></div>
-        <div class="pinyin" id="pinyinText"></div>
-        <div class="divider"></div>
-        <div class="english-hint" id="engHint"></div>
-      </div>
-    </div>
-  `;
-  render();
-}
+function goHome(){ showScreen('screenDecks'); renderList(); }
 
-// ── Swipe support ────────────────────────────────────────────────
-let touchStartX = 0;
-let touchStartY = 0;
-
-document.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
-
-document.addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-    if (dx < 0) nextCard();
-    else prevCard();
+// ── SWIPE ────────────────────────────────────────────────────────────
+let tx=0,ty=0;
+document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  if(document.getElementById('screenStudy').classList.contains('active') && Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>60){
+    dx<0?rateCard(true):rateCard(false);
   }
-}, { passive: true });
+},{passive:true});
 
-// ── Keyboard support ─────────────────────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === ' ') nextCard();
-  if (e.key === 'ArrowLeft') prevCard();
-  if (e.key === 'Enter') flipCard();
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('screenStudy').classList.contains('active')) return;
+  if(e.key==='Enter'||e.key===' ') flipCard();
+  if(e.key==='ArrowRight') rateCard(true);
+  if(e.key==='ArrowLeft') rateCard(false);
+  if(e.key==='ArrowDown') skipCard();
 });
 
-// ── Init ─────────────────────────────────────────────────────────
-render();
+// ── SCREEN ───────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+renderList();
 </script>
 </body>
 </html>
